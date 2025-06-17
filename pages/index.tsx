@@ -1,21 +1,12 @@
+// pages/index.tsx
 import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
 
-interface GameScore {
-  games: [number, number];
-  points: [number, number];
-  isDeuce: boolean;
-  advantage: number;
-  currentServer: number;
-  isMatchWon: boolean;
-  winner: number;
-}
-
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameStateRef = useRef('waiting');
-  const tennisScoreRef = useRef<GameScore>({
+  const tennisScoreRef = useRef({
     games: [0, 0],
     points: [0, 0],
     isDeuce: false,
@@ -25,7 +16,7 @@ export default function Home() {
     winner: -1
   });
   
-  const [gameScore, setGameScore] = useState<GameScore>({
+  const [gameScore, setGameScore] = useState({
     games: [0, 0],
     points: [0, 0],
     isDeuce: false,
@@ -35,26 +26,26 @@ export default function Home() {
     winner: -1
   });
   
-  const [gameStatus, setGameStatus] = useState<string>('');
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [gameStatus, setGameStatus] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
   
-  const keysRef = useRef<{[key: string]: boolean}>({});
+  const keysRef = useRef({});
   const touchInputRef = useRef({ up: false, down: false });
   
   // ゲームオブジェクト
   const gameObjectsRef = useRef({
     player1: {
       x: 20,
-      y: 170,
-      prevY: 170,
+      y: 200 - 30,
+      prevY: 200 - 30,
       velocity: 0
     },
     player2: {
-      x: 570,
-      y: 170,
-      targetY: 170,
+      x: 600 - 30,
+      y: 200 - 30,
+      targetY: 200 - 30,
       difficulty: 0.8,
-      prevY: 170,
+      prevY: 200 - 30,
       velocity: 0,
       reactionDelay: 0,
       predictionError: 0
@@ -98,9 +89,17 @@ export default function Home() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationFrameId: number;
-
     // ゲーム関数
+    const getPointDisplay = (points: number, isDeuce: boolean, advantage: number, playerIndex: number) => {
+      if (isDeuce) {
+        if (advantage === -1) return "40";
+        if (advantage === playerIndex) return "Ad";
+        return "40";
+      }
+      const pointNames = ["0", "15", "30", "40"];
+      return pointNames[Math.min(points, 3)];
+    };
+
     const updateScoreDisplay = () => {
       const score = tennisScoreRef.current;
       setGameScore({ ...score });
@@ -480,7 +479,7 @@ export default function Home() {
     const gameLoop = () => {
       updateGame();
       drawGame();
-      animationFrameId = requestAnimationFrame(gameLoop);
+      requestAnimationFrame(gameLoop);
     };
 
     // イベントリスナー
@@ -528,7 +527,6 @@ export default function Home() {
 
     // クリーンアップ
     return () => {
-      cancelAnimationFrame(animationFrameId);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
       canvas.removeEventListener('touchstart', handleCanvasTouch);
@@ -536,7 +534,7 @@ export default function Home() {
     };
   }, [isMobile]);
 
-  const getPointDisplay = (points: number, isDeuce: boolean, advantage: number, playerIndex: number): string => {
+  const getPointDisplay = (points: number, isDeuce: boolean, advantage: number, playerIndex: number) => {
     if (isDeuce) {
       if (advantage === -1) return "40";
       if (advantage === playerIndex) return "Ad";
@@ -544,10 +542,6 @@ export default function Home() {
     }
     const pointNames = ["0", "15", "30", "40"];
     return pointNames[Math.min(points, 3)];
-  };
-
-  const handleTouchButton = (direction: 'up' | 'down', pressed: boolean) => {
-    touchInputRef.current[direction] = pressed;
   };
 
   const handleSpaceAction = () => {
@@ -574,6 +568,10 @@ export default function Home() {
       };
       gameStateRef.current = 'waiting';
     }
+  };
+
+  const handleTouchButton = (direction: 'up' | 'down', pressed: boolean) => {
+    touchInputRef.current[direction] = pressed;
   };
 
   return (

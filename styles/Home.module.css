@@ -1,3 +1,4 @@
+/* styles/Home.module.css */
 .container {
   margin: 0;
   padding: 20px;
@@ -8,6 +9,13 @@
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .gameTitle {
@@ -40,6 +48,7 @@
   border-radius: 15px;
   border: 2px solid #4ecdc4;
   box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
 }
 
 .scoreSection {
@@ -51,18 +60,33 @@
   color: #ff6b6b;
   font-weight: bold;
   font-size: 20px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
 
 .points {
   color: #4ecdc4;
   font-weight: bold;
   font-size: 18px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
 
 .status {
   color: #ffeb3b !important;
   font-weight: bold;
   margin-top: 5px !important;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.soundNotice {
+  color: #96ceb4 !important;
+  font-size: 14px;
+  margin-top: 5px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 .gameCanvas {
@@ -72,6 +96,8 @@
   box-shadow: 0 8px 25px rgba(0,0,0,0.4);
   max-width: 100%;
   height: auto;
+  touch-action: none;
+  -webkit-touch-callout: none;
 }
 
 .controls {
@@ -83,6 +109,7 @@
   padding: 10px 20px;
   border-radius: 10px;
   border: 1px solid #45b7d1;
+  backdrop-filter: blur(5px);
 }
 
 .blink {
@@ -103,41 +130,65 @@
   justify-content: center;
   gap: 15px;
   flex-wrap: wrap;
+  padding: 10px;
 }
 
 .controlButton {
   font-family: 'Courier New', monospace;
   font-size: 18px;
   font-weight: bold;
-  padding: 15px 20px;
-  border: 2px solid #4ecdc4;
-  border-radius: 10px;
+  padding: 20px 25px;
+  border: 3px solid #4ecdc4;
+  border-radius: 15px;
   background: linear-gradient(45deg, #45b7d1, #4ecdc4);
   color: white;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
   transition: all 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.controlButton::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.controlButton:active::before {
+  width: 300px;
+  height: 300px;
 }
 
 .controlButton:hover,
 .controlButton:active {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.4);
   background: linear-gradient(45deg, #3a9bc1, #42b8a8);
 }
 
 .spaceButton {
   background: linear-gradient(45deg, #ff6b6b, #ee5a52) !important;
   border-color: #ff6b6b !important;
-  min-width: 120px;
+  min-width: 140px;
+  font-size: 16px;
 }
 
 .spaceButton:hover,
 .spaceButton:active {
   background: linear-gradient(45deg, #e55555, #d64545) !important;
+  transform: translateY(-3px) scale(1.05);
 }
 
 /* レスポンシブデザイン */
@@ -148,25 +199,129 @@
   
   .gameTitle {
     font-size: 20px;
+    margin-bottom: 15px;
+  }
+  
+  .scoreBoard {
+    font-size: 14px;
+    padding: 12px;
+    margin-bottom: 15px;
   }
   
   .gameCanvas {
-    max-width: 100%;
+    max-width: calc(100vw - 20px);
     height: auto;
   }
   
   .controls {
     font-size: 12px;
+    padding: 8px 15px;
+  }
+  
+  .controlButton {
+    padding: 18px 22px;
+    font-size: 16px;
+  }
+  
+  .touchControls {
+    margin-top: 15px;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 8px;
+  }
+  
+  .gameTitle {
+    font-size: 18px;
+  }
+  
+  .scoreBoard {
+    font-size: 13px;
+    padding: 10px;
+  }
+  
+  .controlButton {
+    padding: 15px 18px;
+    font-size: 15px;
+  }
+  
+  .spaceButton {
+    font-size: 14px;
+    min-width: 120px;
   }
 }
 
 @media (orientation: landscape) and (max-height: 600px) {
+  .container {
+    padding: 5px;
+  }
+  
+  .gameTitle {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  
+  .scoreBoard {
+    font-size: 12px;
+    padding: 8px;
+    margin-bottom: 10px;
+  }
+  
   .touchControls {
-    margin-top: 10px;
+    margin-top: 8px;
+    gap: 8px;
   }
   
   .controlButton {
-    padding: 10px 15px;
-    font-size: 16px;
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+  
+  .controls {
+    font-size: 11px;
+    padding: 6px 12px;
+    margin-top: 8px;
+  }
+}
+
+/* タブレット特化 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .gameTitle {
+    font-size: 28px;
+  }
+  
+  .scoreBoard {
+    font-size: 18px;
+    padding: 20px;
+  }
+  
+  .controlButton {
+    padding: 25px 30px;
+    font-size: 20px;
+  }
+  
+  .spaceButton {
+    font-size: 18px;
+    min-width: 160px;
+  }
+  
+  .touchControls {
+    gap: 20px;
+  }
+}
+
+/* アニメーション改善 */
+@media (prefers-reduced-motion: reduce) {
+  .rainbow,
+  .colorBlink,
+  .pulse {
+    animation: none;
+  }
+  
+  .controlButton {
+    transition: none;
   }
 }
