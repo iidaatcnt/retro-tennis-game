@@ -1,12 +1,21 @@
-// pages/index.tsx
 import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
 
+interface GameScore {
+  games: [number, number];
+  points: [number, number];
+  isDeuce: boolean;
+  advantage: number;
+  currentServer: number;
+  isMatchWon: boolean;
+  winner: number;
+}
+
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameStateRef = useRef('waiting');
-  const tennisScoreRef = useRef({
+  const tennisScoreRef = useRef<GameScore>({
     games: [0, 0],
     points: [0, 0],
     isDeuce: false,
@@ -16,7 +25,7 @@ export default function Home() {
     winner: -1
   });
   
-  const [gameScore, setGameScore] = useState({
+  const [gameScore, setGameScore] = useState<GameScore>({
     games: [0, 0],
     points: [0, 0],
     isDeuce: false,
@@ -26,26 +35,86 @@ export default function Home() {
     winner: -1
   });
   
-  const [gameStatus, setGameStatus] = useState('');
-  const [isMobile, setIsMobile] = useState(false);
+  const [gameStatus, setGameStatus] = useState<string>('');
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
   
-  const keysRef = useRef({});
+  const keysRef = useRef<{[key: string]: boolean}>({});
   const touchInputRef = useRef({ up: false, down: false });
+  
+  // 音声関連
+  const audioContextRef = useRef<AudioContext | null>(null);
+  
+  // 効果音を生成する関数
+  const createBeepSound = (frequency: number, duration: number, volume: number = 0.1) => {
+    if (!audioContextRef.current || !soundEnabled) return;
+    
+    try {
+      const oscillator = audioContextRef.current.createOscillator();
+      const gainNode = audioContextRef.current.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContextRef.current.destination);
+      
+      oscillator.frequency.setValueAtTime(frequency, audioContextRef.current.currentTime);
+      oscillator.type = 'square';
+      
+      gainNode.gain.setValueAtTime(0, audioContextRef.current.currentTime);
+      gainNode.gain.linearRampToValueAtTime(volume, audioContextRef.current.currentTime + 0.01);
+      gainNode.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + duration);
+      
+      oscillator.start(audioContextRef.current.currentTime);
+      oscillator.stop(audioContextRef.current.currentTime + duration);
+    } catch (error) {
+      console.log('Audio error:', error);
+    }
+  };
+  
+  // 各種効果音
+  const playPaddleHitSound = () => createBeepSound(800, 0.1, 0.15);
+  const playWallHitSound = () => createBeepSound(400, 0.15, 0.1);
+  const playPointSound = () => createBeepSound(1200, 0.3, 0.2);
+  const playGameWinSound = () => {
+    createBeepSound(600, 0.2, 0.15);
+    setTimeout(() => createBeepSound(800, 0.2, 0.15), 150);
+    setTimeout(() => createBeepSound(1000, 0.3, 0.2), 300);
+  };
+  const playMatchWinSound = () => {
+    const notes = [523, 659, 783, 1047]; // C, E, G, C (ドミソド)
+    notes.forEach((note, index) => {
+      setTimeout(() => createBeepSound(note, 0.4, 0.2), index * 200);
+    });
+  };
+  
+  // 音声初期化
+  const initAudio = () => {
+    try {
+      if (typeof window !== 'undefined' && !audioContextRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioContextRef.current = new AudioContextClass();
+          setSoundEnabled(true);
+        }
+      }
+    } catch (error) {
+      console.log('Audio initialization error:', error);
+    }
+  };
   
   // ゲームオブジェクト
   const gameObjectsRef = useRef({
     player1: {
       x: 20,
-      y: 200 - 30,
-      prevY: 200 - 30,
+      y: 170,
+      prevY: 170,
       velocity: 0
     },
     player2: {
-      x: 600 - 30,
-      y: 200 - 30,
-      targetY: 200 - 30,
+      x: 570,
+      y: 170,
+      targetY: 170,
       difficulty: 0.8,
-      prevY: 200 - 30,
+      prevY: 170,
       velocity: 0,
       reactionDelay: 0,
       predictionError: 0
@@ -68,8 +137,9 @@ export default function Home() {
   useEffect(() => {
     // モバイル検出
     const checkMobile = () => {
+      if (typeof window === 'undefined') return false;
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-             window.innerWidth <= 768;
+             window.innerWidth <= 1024; // タブレットも含める
     };
     setIsMobile(checkMobile());
     
@@ -77,9 +147,11 @@ export default function Home() {
     const handleResize = () => {
       setIsMobile(checkMobile());
     };
-    window.addEventListener('resize', handleResize);
     
-    return () => window.removeEventListener('resize', handleResize);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
   }, []);
 
   useEffect(() => {
@@ -89,17 +161,9 @@ export default function Home() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // ゲーム関数
-    const getPointDisplay = (points: number, isDeuce: boolean, advantage: number, playerIndex: number) => {
-      if (isDeuce) {
-        if (advantage === -1) return "40";
-        if (advantage === playerIndex) return "Ad";
-        return "40";
-      }
-      const pointNames = ["0", "15", "30", "40"];
-      return pointNames[Math.min(points, 3)];
-    };
+    let animationFrameId: number;
 
+    // ゲーム関数
     const updateScoreDisplay = () => {
       const score = tennisScoreRef.current;
       setGameScore({ ...score });
@@ -117,9 +181,9 @@ export default function Home() {
       }
       
       if (gameStateRef.current === 'gameWon') {
-        status = `${score.winner === 0 ? 'プレイヤー' : 'コンピューター'} ゲーム勝利! (SPACE で次のゲーム)`;
+        status = `${score.winner === 0 ? 'プレイヤー' : 'コンピューター'} ゲーム勝利! (タップで次のゲーム)`;
       } else if (gameStateRef.current === 'matchWon') {
-        status = `${score.winner === 0 ? 'プレイヤー' : 'コンピューター'} マッチ勝利! (SPACE でリスタート)`;
+        status = `${score.winner === 0 ? 'プレイヤー' : 'コンピューター'} マッチ勝利! (タップでリスタート)`;
       } else if (gameStateRef.current === 'serving') {
         if (score.currentServer === 0) {
           status = isMobile ? 'プレイヤーのサーブ - ボタンで位置調整、タップでサーブ' : 'プレイヤーのサーブ - W/Sで位置調整、SPACEでサーブ';
@@ -138,6 +202,8 @@ export default function Home() {
     const addPoint = (playerIndex: number) => {
       const score = tennisScoreRef.current;
       if (score.isMatchWon) return;
+      
+      playPointSound(); // ポイント獲得音
       
       if (score.isDeuce) {
         if (score.advantage === -1) {
@@ -172,8 +238,10 @@ export default function Home() {
       if (score.games[playerIndex] >= 3) {
         score.isMatchWon = true;
         gameStateRef.current = 'matchWon';
+        playMatchWinSound(); // マッチ勝利音
       } else {
         gameStateRef.current = 'gameWon';
+        playGameWinSound(); // ゲーム勝利音
       }
       
       updateScoreDisplay();
@@ -247,6 +315,11 @@ export default function Home() {
     };
 
     const handleSpaceAction = () => {
+      // 音声を初期化（ユーザーアクションが必要）
+      if (!soundEnabled) {
+        initAudio();
+      }
+      
       if (gameStateRef.current === 'waiting') {
         startServing();
       } else if (gameStateRef.current === 'serving') {
@@ -331,13 +404,14 @@ export default function Home() {
 
     const updateGame = () => {
       const { player1, player2, ball } = gameObjectsRef.current;
+      const keys = keysRef.current;
       
       player1.prevY = player1.y;
       
-      if ((keysRef.current['w'] || touchInputRef.current.up) && player1.y > 0) {
+      if ((keys['w'] || touchInputRef.current.up) && player1.y > 0) {
         player1.y -= paddleSpeed;
       }
-      if ((keysRef.current['s'] || touchInputRef.current.down) && player1.y < 400 - paddleHeight) {
+      if ((keys['s'] || touchInputRef.current.down) && player1.y < 400 - paddleHeight) {
         player1.y += paddleSpeed;
       }
       player1.velocity = player1.y - player1.prevY;
@@ -362,6 +436,7 @@ export default function Home() {
       
       if (ball.y <= ball.size || ball.y >= 400 - ball.size) {
         ball.dy = -ball.dy;
+        playWallHitSound(); // 壁衝突音
       }
       
       if (ball.x - ball.size <= player1.x + paddleWidth &&
@@ -372,6 +447,7 @@ export default function Home() {
         ball.dx *= 1.02;
         ball.dy += player1.velocity * 0.3;
         ball.hitCount++;
+        playPaddleHitSound(); // パドル衝突音
       }
       
       if (ball.x + ball.size >= player2.x &&
@@ -382,6 +458,7 @@ export default function Home() {
         ball.dx *= 1.02;
         ball.dy += player2.velocity * 0.3;
         ball.hitCount++;
+        playPaddleHitSound(); // パドル衝突音
       }
       
       if (!ball.scored) {
@@ -479,7 +556,7 @@ export default function Home() {
     const gameLoop = () => {
       updateGame();
       drawGame();
-      requestAnimationFrame(gameLoop);
+      animationFrameId = requestAnimationFrame(gameLoop);
     };
 
     // イベントリスナー
@@ -516,10 +593,12 @@ export default function Home() {
     };
 
     // イベントリスナー追加
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-    canvas.addEventListener('touchstart', handleCanvasTouch);
-    canvas.addEventListener('touchend', handleCanvasTouchEnd);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keyup', handleKeyUp);
+      canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
+      canvas.addEventListener('touchend', handleCanvasTouchEnd, { passive: false });
+    }
 
     // 初期化
     updateScoreDisplay();
@@ -527,14 +606,17 @@ export default function Home() {
 
     // クリーンアップ
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-      canvas.removeEventListener('touchstart', handleCanvasTouch);
-      canvas.removeEventListener('touchend', handleCanvasTouchEnd);
+      cancelAnimationFrame(animationFrameId);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener('keyup', handleKeyUp);
+        canvas.removeEventListener('touchstart', handleCanvasTouch);
+        canvas.removeEventListener('touchend', handleCanvasTouchEnd);
+      }
     };
-  }, [isMobile]);
+  }, [isMobile, soundEnabled]);
 
-  const getPointDisplay = (points: number, isDeuce: boolean, advantage: number, playerIndex: number) => {
+  const getPointDisplay = (points: number, isDeuce: boolean, advantage: number, playerIndex: number): string => {
     if (isDeuce) {
       if (advantage === -1) return "40";
       if (advantage === playerIndex) return "Ad";
@@ -544,7 +626,16 @@ export default function Home() {
     return pointNames[Math.min(points, 3)];
   };
 
+  const handleTouchButton = (direction: 'up' | 'down', pressed: boolean) => {
+    touchInputRef.current[direction] = pressed;
+  };
+
   const handleSpaceAction = () => {
+    // 音声を初期化（ユーザーアクションが必要）
+    if (!soundEnabled) {
+      initAudio();
+    }
+    
     if (gameStateRef.current === 'waiting') {
       gameStateRef.current = 'serving';
     } else if (gameStateRef.current === 'serving') {
@@ -570,16 +661,12 @@ export default function Home() {
     }
   };
 
-  const handleTouchButton = (direction: 'up' | 'down', pressed: boolean) => {
-    touchInputRef.current[direction] = pressed;
-  };
-
   return (
     <>
       <Head>
         <title>Retro Tennis Game</title>
         <meta name="description" content="1980年代風レトロテニスゲーム" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
@@ -598,6 +685,9 @@ export default function Home() {
             </span> コンピューター
           </div>
           <div className={`${styles.scoreSection} ${styles.status}`}>{gameStatus}</div>
+          {!soundEnabled && (
+            <div className={styles.soundNotice}>🔊 タップで効果音ON</div>
+          )}
         </div>
 
         <canvas
