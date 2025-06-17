@@ -1,0 +1,172 @@
+.container {
+  margin: 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.gameTitle {
+  font-size: 24px;
+  margin-bottom: 10px;
+  text-align: center;
+  color: #ffeb3b;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+  background-size: 400% 400%;
+  animation: rainbow 3s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes rainbow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.scoreBoard {
+  font-size: 16px;
+  margin-bottom: 20px;
+  text-align: center;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: 15px;
+  border: 2px solid #4ecdc4;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.scoreSection {
+  margin: 5px 0;
+  color: #e8f5e8;
+}
+
+.games {
+  color: #ff6b6b;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.points {
+  color: #4ecdc4;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.status {
+  color: #ffeb3b !important;
+  font-weight: bold;
+  margin-top: 5px !important;
+}
+
+.gameCanvas {
+  border: 3px solid #ff6b6b;
+  background: linear-gradient(45deg, #0f3460, #16537e);
+  border-radius: 10px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+  max-width: 100%;
+  height: auto;
+}
+
+.controls {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #96ceb4;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid #45b7d1;
+}
+
+.blink {
+  animation: colorBlink 1.5s infinite;
+}
+
+@keyframes colorBlink {
+  0%, 100% { color: #ffeb3b; }
+  25% { color: #ff6b6b; }
+  50% { color: #4ecdc4; }
+  75% { color: #45b7d1; }
+}
+
+/* タッチコントロール */
+.touchControls {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.controlButton {
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  font-weight: bold;
+  padding: 15px 20px;
+  border: 2px solid #4ecdc4;
+  border-radius: 10px;
+  background: linear-gradient(45deg, #45b7d1, #4ecdc4);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.controlButton:hover,
+.controlButton:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  background: linear-gradient(45deg, #3a9bc1, #42b8a8);
+}
+
+.spaceButton {
+  background: linear-gradient(45deg, #ff6b6b, #ee5a52) !important;
+  border-color: #ff6b6b !important;
+  min-width: 120px;
+}
+
+.spaceButton:hover,
+.spaceButton:active {
+  background: linear-gradient(45deg, #e55555, #d64545) !important;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+  
+  .gameTitle {
+    font-size: 20px;
+  }
+  
+  .gameCanvas {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .controls {
+    font-size: 12px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .touchControls {
+    margin-top: 10px;
+  }
+  
+  .controlButton {
+    padding: 10px 15px;
+    font-size: 16px;
+  }
+}
